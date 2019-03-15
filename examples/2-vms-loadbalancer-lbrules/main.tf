@@ -1,9 +1,11 @@
-# provider "azurerm" {
-#   subscription_id = "REPLACE-WITH-YOUR-SUBSCRIPTION-ID"
-#   client_id       = "REPLACE-WITH-YOUR-CLIENT-ID"
-#   client_secret   = "REPLACE-WITH-YOUR-CLIENT-SECRET"
-#   tenant_id       = "REPLACE-WITH-YOUR-TENANT-ID"
-# }
+provider "azurerm" {
+  subscription_id = "${var.subscription_id}"
+  client_id       = "${var.client_id}"
+  client_secret   = "${var.client_secret}"
+  tenant_id       = "${var.tenant_id}"
+
+  version = "=1.23.0"
+}
 
 resource "azurerm_resource_group" "rg" {
   name     = "${var.resource_group}"
@@ -11,7 +13,7 @@ resource "azurerm_resource_group" "rg" {
 }
 
 resource "azurerm_storage_account" "stor" {
-  name                     = "${var.dns_name}stor"
+  name                     = "${var.storageaccount_name}stor"
   location                 = "${var.location}"
   resource_group_name      = "${azurerm_resource_group.rg.name}"
   account_tier             = "${var.storage_account_tier}"
@@ -19,7 +21,7 @@ resource "azurerm_storage_account" "stor" {
 }
 
 resource "azurerm_availability_set" "avset" {
-  name                         = "${var.dns_name}avset"
+  name                         = "avset-${var.rg_prefix}"
   location                     = "${var.location}"
   resource_group_name          = "${azurerm_resource_group.rg.name}"
   platform_fault_domain_count  = 2
@@ -28,7 +30,7 @@ resource "azurerm_availability_set" "avset" {
 }
 
 resource "azurerm_public_ip" "lbpip" {
-  name                         = "${var.rg_prefix}-ip"
+  name                         = "pip-${var.rg_prefix}"
   location                     = "${var.location}"
   resource_group_name          = "${azurerm_resource_group.rg.name}"
   allocation_method = "Dynamic"
@@ -36,14 +38,14 @@ resource "azurerm_public_ip" "lbpip" {
 }
 
 resource "azurerm_virtual_network" "vnet" {
-  name                = "${var.virtual_network_name}"
+  name                = "vnet-${var.rg_prefix}"
   location            = "${var.location}"
   address_space       = ["${var.address_space}"]
   resource_group_name = "${azurerm_resource_group.rg.name}"
 }
 
 resource "azurerm_subnet" "subnet" {
-  name                 = "${var.rg_prefix}subnet"
+  name                 = "sn-${var.rg_prefix}"
   virtual_network_name = "${azurerm_virtual_network.vnet.name}"
   resource_group_name  = "${azurerm_resource_group.rg.name}"
   address_prefix       = "${var.subnet_prefix}"
@@ -51,7 +53,7 @@ resource "azurerm_subnet" "subnet" {
 
 resource "azurerm_lb" "lb" {
   resource_group_name = "${azurerm_resource_group.rg.name}"
-  name                = "${var.rg_prefix}lb"
+  name                = "ilb-${var.rg_prefix}-web"
   location            = "${var.location}"
 
   frontend_ip_configuration {
@@ -103,7 +105,7 @@ resource "azurerm_lb_probe" "lb_probe" {
 }
 
 resource "azurerm_network_interface" "nic" {
-  name                = "nic${count.index}"
+  name                = "web${count.index + 1}-nic"
   location            = "${var.location}"
   resource_group_name = "${azurerm_resource_group.rg.name}"
   count               = 2
@@ -117,32 +119,69 @@ resource "azurerm_network_interface" "nic" {
   }
 }
 
+#resource "azurerm_network_interface_backend_address_pool_association" "backend_pool" {
+#  network_interface_id    = "${element(azurerm_network_interface.nic.*.id,count.index)}"
+#  ip_configuration_name   = "ipconfig${count.index}"
+#  backend_address_pool_id = "${azurerm_lb_backend_address_pool.backend_pool.id}"
+#  count                   = "${var.vm_count}"
+#  depends_on              = ["azurerm_network_interface.nic","azurerm_lb_backend_address_pool.backend_pool"]
+#}
+
+#resource "azurerm_network_interface_nat_rule_association" "tcp" {
+#  network_interface_id  = "${element(azurerm_network_interface.nic.*.id,count.index)}"
+#  ip_configuration_name = "ipconfig${count.index}"
+#  nat_rule_id           = "${azurerm_lb_nat_rule.tcp.id}"
+#  count                 = "${var.vm_count}"
+#  depends_on            = ["azurerm_network_interface.nic","azurerm_lb_nat_rule.tcp"]
+#}
+
 resource "azurerm_virtual_machine" "vm" {
-  name                  = "vm${count.index}"
+  name                  = "web${count.index + 1}"
   location              = "${var.location}"
   resource_group_name   = "${azurerm_resource_group.rg.name}"
   availability_set_id   = "${azurerm_availability_set.avset.id}"
   vm_size               = "${var.vm_size}"
   network_interface_ids = ["${element(azurerm_network_interface.nic.*.id, count.index)}"]
-  count                 = 2
+  count                 = "${var.vm_count}"
 
   storage_image_reference {
-    publisher = "${var.image_publisher}"
-    offer     = "${var.image_offer}"
-    sku       = "${var.image_sku}"
-    version   = "${var.image_version}"
+    id = "/subscriptions/8b4408ad-500e-49e3-a5f3-231f895d8325/resourceGroups/rg-scus-mscafe-images/providers/Microsoft.Compute/images/Win2016ServerImage"
   }
+  #storage_image_reference {
+  #  publisher = "${var.image_publisher}"
+  #  offer     = "${var.image_offer}"
+  #  sku       = "${var.image_sku}"
+  #  version   = "${var.image_version}"
+  #}
 
   storage_os_disk {
-    name          = "osdisk${count.index}"
-    create_option = "FromImage"
+    name              = "web${count.index + 1}-osdisk"
+    managed_disk_type = "Premium_LRS"
+    caching           = "ReadWrite"
+    create_option     = "FromImage"
   }
 
   os_profile {
-    computer_name  = "${var.hostname}"
+    computer_name  = "${var.hostname}${count.index +1}"
     admin_username = "${var.admin_username}"
     admin_password = "${var.admin_password}"
   }
 
   os_profile_windows_config {}
 }
+
+#resource "azurerm_virtual_machine_extension" "IIS" {
+#  name                 = "${var.hostname}${count.index +1}"
+#  location             = "${var.location}"
+#  resource_group_name  = "${azurerm_resource_group.rg.name}"
+#  virtual_machine_name = "${element(azurerm_virtual_machine.vm.*.id, count.index)}"
+#  publisher            = "Microsoft.Compute"
+#  type                 = "CustomScript"
+#  type_handler_version = "2.0"
+#
+#  settings = <<SETTINGS
+#    {
+#        "commandToExecute": "powershell.exe Install-WindowsFeature -name Web-Server -IncludeManagementTools"
+#    }
+#SETTINGS
+#    }
