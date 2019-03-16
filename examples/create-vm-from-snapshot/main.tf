@@ -45,12 +45,12 @@ resource "azurerm_public_ip" "lbpip" {
   name                         = "pip-${var.rg_prefix}"
   location                     = "${var.location}"
   resource_group_name          = "${azurerm_resource_group.rg.name}"
-  allocation_method = "Dynamic"
+  allocation_method            = "Dynamic"
   domain_name_label            = "${var.lb_ip_dns_name}"
 
   tags {
    environment = "${var.environment}"
-  }
+  }  
 }
 
 resource "azurerm_virtual_network" "vnet" {
@@ -61,7 +61,7 @@ resource "azurerm_virtual_network" "vnet" {
 
   tags {
    environment = "${var.environment}"
-  }
+  }  
 }
 
 resource "azurerm_subnet" "subnet" {
@@ -133,6 +133,7 @@ resource "azurerm_network_interface" "nic" {
   location            = "${var.location}"
   resource_group_name = "${azurerm_resource_group.rg.name}"
   count               = 2
+
     tags {
       environment = "${var.environment}"
     }
@@ -146,21 +147,19 @@ resource "azurerm_network_interface" "nic" {
   }
 }
 
-#resource "azurerm_network_interface_backend_address_pool_association" "backend_pool" {
-#  network_interface_id    = "${element(azurerm_network_interface.nic.*.id,count.index)}"
-#  ip_configuration_name   = "ipconfig${count.index}"
-#  backend_address_pool_id = "${azurerm_lb_backend_address_pool.backend_pool.id}"
-#  count                   = "${var.vm_count}"
-#  depends_on              = ["azurerm_network_interface.nic","azurerm_lb_backend_address_pool.backend_pool"]
-#}
+resource "azurerm_managed_disk" "copy" {
+  name                  = "web${count.index + 1}-osdisk"
+  location              = "${var.location}"
+  resource_group_name   = "${azurerm_resource_group.rg.name}"
+  storage_account_type  = "Premium_LRS"
+  create_option         = "Copy"
+  source_resource_id    = "/subscriptions/8b4408ad-500e-49e3-a5f3-231f895d8325/resourceGroups/rg-mscafe-terraform-prod/providers/Microsoft.Compute/snapshots/web1-osdisk-snapshot-031419"
+  disk_size_gb          = "127"
 
-#resource "azurerm_network_interface_nat_rule_association" "tcp" {
-#  network_interface_id  = "${element(azurerm_network_interface.nic.*.id,count.index)}"
-#  ip_configuration_name = "ipconfig${count.index}"
-#  nat_rule_id           = "${azurerm_lb_nat_rule.tcp.id}"
-#  count                 = "${var.vm_count}"
-#  depends_on            = ["azurerm_network_interface.nic","azurerm_lb_nat_rule.tcp"]
-#}
+  tags {
+    environment = "${var.environment}"
+  }
+}
 
 resource "azurerm_virtual_machine" "vm" {
   name                  = "web${count.index + 1}"
@@ -175,44 +174,11 @@ resource "azurerm_virtual_machine" "vm" {
       environment = "${var.environment}"
     }
 
-  storage_image_reference {
-    id = "/subscriptions/8b4408ad-500e-49e3-a5f3-231f895d8325/resourceGroups/rg-scus-mscafe-images/providers/Microsoft.Compute/images/Win2016ServerImage"
-  }
-  #storage_image_reference {
-  #  publisher = "${var.image_publisher}"
-  #  offer     = "${var.image_offer}"
-  #  sku       = "${var.image_sku}"
-  #  version   = "${var.image_version}"
-  #}
-
   storage_os_disk {
-    name              = "web${count.index + 1}-osdisk"
-    managed_disk_type = "Premium_LRS"
+    name              = "${azurerm_managed_disk.copy.name}"
+    os_type           = "Windows"
+    managed_disk_id   = "${azurerm_managed_disk.copy.id}"
     caching           = "ReadWrite"
-    create_option     = "FromImage"
+    create_option     = "Attach"
   }
-
-  os_profile {
-    computer_name  = "${var.hostname}${count.index +1}"
-    admin_username = "${var.admin_username}"
-    admin_password = "${var.admin_password}"
-  }
-
-  os_profile_windows_config {}
 }
-
-#resource "azurerm_virtual_machine_extension" "IIS" {
-#  name                 = "${var.hostname}${count.index +1}"
-#  location             = "${var.location}"
-#  resource_group_name  = "${azurerm_resource_group.rg.name}"
-#  virtual_machine_name = "${element(azurerm_virtual_machine.vm.*.id, count.index)}"
-#  publisher            = "Microsoft.Compute"
-#  type                 = "CustomScript"
-#  type_handler_version = "2.0"
-#
-#  settings = <<SETTINGS
-#    {
-#        "commandToExecute": "powershell.exe Install-WindowsFeature -name Web-Server -IncludeManagementTools"
-#    }
-#SETTINGS
-#    }

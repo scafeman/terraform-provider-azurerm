@@ -12,15 +12,11 @@ variable "resource_group" {
 
 variable "rg_prefix" {
   description = "The shortened abbreviation to represent your resource group that will go on the front of some resources."
-  default     = "mscafe-terraform"
+  default     = "mscafe-terraform-uat"
 }
 
 variable "hostname" {
   description = "VM Name"
-}
-
-variable "environment" {
-  description = "Name of the environment to deploy IE: Dev, Stage, UAT, Prod"
 }
 
 #variable "dns_name" {
@@ -48,12 +44,12 @@ variable "location" {
 
 variable "address_space" {
   description = "The address space that is used by the virtual network. You can supply more than one address space. Changing this forces a new resource to be created."
-  default     = "10.10.0.0/21"
+  default     = "10.20.0.0/21"
 }
 
 variable "subnet_prefix" {
   description = "The address prefix to use for the subnet."
-  default     = "10.10.1.0/24"
+  default     = "10.20.1.0/24"
 }
 
 variable "storage_account_tier" {
@@ -67,6 +63,10 @@ variable "storage_replication_type" {
 }
 variable "vm_count" {
   description = "Number of VM's to deploy"  
+}
+
+variable "environment" {
+  description = "Name of the environment you want to deploy IE: Dev, Stage, UAT, Prod"  
 }
 
 variable "vm_size" {
