@@ -8,7 +8,7 @@ provider "azurerm" {
 }
 
 resource "azurerm_resource_group" "rg" {
-  name     = "${var.resource_group}"
+  name     = "rg-${var.resource_group}-${var.environment}"
   location = "${var.location}"
 
   tags {
@@ -17,7 +17,7 @@ resource "azurerm_resource_group" "rg" {
 }
 
 resource "azurerm_storage_account" "stor" {
-  name                     = "${var.storageaccount_name}stor"
+  name                     = "${var.environment}${var.storageaccount_name}stor"
   location                 = "${var.location}"
   resource_group_name      = "${azurerm_resource_group.rg.name}"
   account_tier             = "${var.storage_account_tier}"
@@ -29,7 +29,7 @@ resource "azurerm_storage_account" "stor" {
 }
 
 resource "azurerm_availability_set" "avset" {
-  name                         = "avset-${var.rg_prefix}"
+  name                         = "avset-${var.rg_prefix}-${var.environment}"
   location                     = "${var.location}"
   resource_group_name          = "${azurerm_resource_group.rg.name}"
   platform_fault_domain_count  = 2
@@ -42,7 +42,7 @@ resource "azurerm_availability_set" "avset" {
 }
 
 resource "azurerm_public_ip" "lbpip" {
-  name                         = "pip-${var.rg_prefix}"
+  name                         = "pip-${var.rg_prefix}-${var.environment}"
   location                     = "${var.location}"
   resource_group_name          = "${azurerm_resource_group.rg.name}"
   allocation_method = "Dynamic"
@@ -54,7 +54,7 @@ resource "azurerm_public_ip" "lbpip" {
 }
 
 resource "azurerm_virtual_network" "vnet" {
-  name                = "vnet-${var.rg_prefix}"
+  name                = "vnet-${var.rg_prefix}-${var.environment}"
   location            = "${var.location}"
   address_space       = ["${var.address_space}"]
   resource_group_name = "${azurerm_resource_group.rg.name}"
@@ -73,7 +73,7 @@ resource "azurerm_subnet" "subnet" {
 
 resource "azurerm_lb" "lb" {
   resource_group_name = "${azurerm_resource_group.rg.name}"
-  name                = "ilb-${var.rg_prefix}-web"
+  name                = "ilb-${var.rg_prefix}-${var.environment}-${var.hostname}"
   location            = "${var.location}"
 
     tags {
@@ -129,7 +129,7 @@ resource "azurerm_lb_probe" "lb_probe" {
 }
 
 resource "azurerm_network_interface" "nic" {
-  name                = "web${count.index + 1}-nic"
+  name                = "${var.environment}-${var.hostname}${count.index + 1}-nic"
   location            = "${var.location}"
   resource_group_name = "${azurerm_resource_group.rg.name}"
   count               = 2
@@ -163,7 +163,7 @@ resource "azurerm_network_interface" "nic" {
 #}
 
 resource "azurerm_virtual_machine" "vm" {
-  name                  = "web${count.index + 1}"
+  name                  = "${var.environment}-${var.hostname}${count.index + 1}"
   location              = "${var.location}"
   resource_group_name   = "${azurerm_resource_group.rg.name}"
   availability_set_id   = "${azurerm_availability_set.avset.id}"
@@ -186,7 +186,7 @@ resource "azurerm_virtual_machine" "vm" {
   #}
 
   storage_os_disk {
-    name              = "web${count.index + 1}-osdisk"
+    name              = "${var.environment}-${var.hostname}${count.index + 1}-osdisk"
     managed_disk_type = "Premium_LRS"
     caching           = "ReadWrite"
     create_option     = "FromImage"
