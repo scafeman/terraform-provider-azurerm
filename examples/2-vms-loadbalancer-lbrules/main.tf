@@ -84,10 +84,11 @@ resource "azurerm_virtual_network" "vnet" {
 }
 
 resource "azurerm_subnet" "subnet" {
-  name                 = "sn-${var.rg_prefix}"
+  name                 = "sn-${var.rg_prefix}-internal"
   virtual_network_name = "${azurerm_virtual_network.vnet.name}"
   resource_group_name  = "${azurerm_resource_group.rg.name}"
   address_prefix       = "${var.subnet_prefix}"
+  service_endpoints    =  ["Microsoft.Sql"]
 }
 
 resource "azurerm_lb" "lb" {
@@ -252,12 +253,19 @@ resource "azurerm_sql_database" "db" {
 
 # Enables the "Allow Access to Azure services" box as described in the API docs 
 # https://docs.microsoft.com/en-us/rest/api/sql/firewallrules/createorupdate
-resource "azurerm_sql_firewall_rule" "fw" {
-  name                = "firewallrule-1"
+#resource "azurerm_sql_firewall_rule" "fw" {
+#  name                = "firewallrule-1"
+#  resource_group_name = "${azurerm_resource_group.rg.name}"
+#  server_name         = "${azurerm_sql_server.server.name}"
+#  start_ip_address    = "0.0.0.0"
+#  end_ip_address      = "0.0.0.0"
+#}
+
+resource "azurerm_sql_virtual_network_rule" "sqlvnetrule" {
+  name                = "sql-vnet-rule"
   resource_group_name = "${azurerm_resource_group.rg.name}"
   server_name         = "${azurerm_sql_server.server.name}"
-  start_ip_address    = "0.0.0.0"
-  end_ip_address      = "0.0.0.0"
+  subnet_id           = "${azurerm_subnet.subnet.id}"
 }
 
 resource "azurerm_recovery_services_vault" "rsv" {
