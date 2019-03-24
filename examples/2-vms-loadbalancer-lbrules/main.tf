@@ -222,6 +222,44 @@ resource "azurerm_virtual_machine" "vm" {
   }
 }
 
+resource "azurerm_sql_server" "server" {
+  name                         = "sqlsvr-${var.rg_prefix}-${var.environment}"
+  resource_group_name          = "${azurerm_resource_group.rg.name}"
+  location                     = "${var.location}"
+  version                      = "12.0"
+  administrator_login          = "${var.sql_admin}"
+  administrator_login_password = "${var.sql_password}"
+
+  tags {
+   environment = "${var.environment}"
+  }
+}
+
+resource "azurerm_sql_database" "db" {
+  name                             = "sqlsvr-${var.rg_prefix}-${var.environment}-db"
+  resource_group_name              = "${azurerm_resource_group.rg.name}"
+  location                         = "${var.location}"
+  edition                          = "Standard"
+  collation                        = "SQL_Latin1_General_CP1_CI_AS"
+  create_mode                      = "Default"
+  requested_service_objective_name = "S1"
+  server_name                      = "${azurerm_sql_server.server.name}"
+
+  tags {
+   environment = "${var.environment}"
+  }
+}
+
+# Enables the "Allow Access to Azure services" box as described in the API docs 
+# https://docs.microsoft.com/en-us/rest/api/sql/firewallrules/createorupdate
+resource "azurerm_sql_firewall_rule" "fw" {
+  name                = "firewallrule-1"
+  resource_group_name = "${azurerm_resource_group.rg.name}"
+  server_name         = "${azurerm_sql_server.server.name}"
+  start_ip_address    = "0.0.0.0"
+  end_ip_address      = "0.0.0.0"
+}
+
 resource "azurerm_recovery_services_vault" "rsv" {
   name                = "rsv-${var.rg_prefix}-${var.environment}"
   location            = "${var.location}"

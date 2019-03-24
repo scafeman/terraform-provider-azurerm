@@ -49,6 +49,11 @@ variable "lb_ip_dns_name" {
   default     = "mscafe"
 }
 
+variable "sqlsvr_dns_name" {
+  description = "DNS name for the SQL Server"
+  default     = "mscafe"
+}
+
 variable "location" {
   description = "The location/region where the virtual network is created. Changing this forces a new resource to be created."
   default     = "southcentralus"
@@ -123,6 +128,15 @@ variable "admin_username" {
 }
 
 variable "admin_password" {
+  description = "administrator password (recommended to disable password auth)"
+}
+
+variable "sql_admin" {
+  description = "administrator user name"
+  default     = "mscafe"
+}
+
+variable "sql_password" {
   description = "administrator password (recommended to disable password auth)"
 }
 
