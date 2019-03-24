@@ -7,12 +7,23 @@ variable "client_secret" {}
 variable "tenant_id" {}
 
 variable "resource_group" {
-  description = "The name of the resource group in which to create the virtual network."
+  description = "The name of the resource group in which to create the VNET, ILB and VM's."
+  default     = "mscafe-tf"
+}
+
+variable "rsv_resource_group" {
+  description = "The name of the resource group in which to create the Recovery Services Vault."
+  default     = "mscafe-tf"
+}
+
+variable "image_resource_group" {
+  description = "The name of the Resource Group where the Golden Image is located."
+  default     = "rg-scus-mscafe-images"
 }
 
 variable "rg_prefix" {
   description = "The shortened abbreviation to represent your resource group that will go on the front of some resources."
-  default     = "mscafe-terraform"
+  default     = "mscafe-tf"
 }
 
 variable "hostname" {
@@ -29,11 +40,13 @@ variable "environment" {
 
 variable "storageaccount_name" {
   description = "Must be a globally unique name that is not already use"
+  default     = "mscafewebsrv"
   
 }
 
 variable "lb_ip_dns_name" {
   description = "DNS for Load Balancer IP"
+  default     = "mscafe"
 }
 
 variable "location" {
@@ -41,9 +54,14 @@ variable "location" {
   default     = "southcentralus"
 }
 
+variable "rsv_location" {
+  description = "The location/region where the virtual network is created. Changing this forces a new resource to be created."
+  default     = "southcentralus"
+}
+
 #variable "virtual_network_name" {
 #  description = "The name for the virtual network."
-#  default     = "vnet-mscafe-terraform"
+#  default     = "vnet-mscafe-tf"
 #}
 
 variable "address_space" {
@@ -74,6 +92,11 @@ variable "vm_size" {
   default     = "Standard_B2ms"
 }
 
+variable "image_name" {
+ description = "The name of the existing Golden Image"
+ default     = "Win2016ServerImage"
+}
+
 variable "image_publisher" {
   description = "name of the publisher of the image (az vm image list)"
   default     = "MicrosoftWindowsServer"
@@ -101,4 +124,9 @@ variable "admin_username" {
 
 variable "admin_password" {
   description = "administrator password (recommended to disable password auth)"
+}
+
+variable "enable_backup" {
+  description = "Variable to enable backups on a Protected VM"
+  default     = "true"
 }

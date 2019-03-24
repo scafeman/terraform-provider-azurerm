@@ -1,7 +1,7 @@
 variable "resource_group_name" {
   type        = "string"
   description = "Name of the azure resource group."
-  default     = "tfex-recovery_services"
+  default     = "rg-mscafe-scu-recovery_services"
 }
 
 variable "vm_size" {

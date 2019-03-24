@@ -271,18 +271,36 @@ resource "azurerm_recovery_services_protection_policy_vm" "advanced" {
   }
 }
 
-resource "azurerm_recovery_services_protected_vm" "enable_backup" {
+resource "azurerm_template_deployment" "enable_backups" {
   count               = "${var.enable_backup == "true" && var.vm_count > 0 ? var.vm_count : 0}"
+  name                = "${element(azurerm_virtual_machine.vm.*.name,count.index)}-bck"
   resource_group_name = "${azurerm_resource_group.rsv_rg.name}"
-  recovery_vault_name = "${azurerm_recovery_services_vault.rsv.name}"
-  source_vm_id        = "${element(azurerm_virtual_machine.vm.*.id, count.index)}"
-#  source_vm_id        = "${azurerm_virtual_machine.vm.*.id[count.index]}"
-  backup_policy_id    = "${azurerm_recovery_services_protection_policy_vm.simple.id}"
+  template_body       = "${file("files/AzureRmRecoveryServicesBackupProtection_template.json")}"
+  deployment_mode     = "Incremental"
 
-    tags {
-    environment = "${var.environment}"
+  parameters = {
+    protectedItemType         = "Microsoft.Compute/virtualMachines"
+    resourcegroupname         = "${azurerm_resource_group.rsv_rg.name}"
+    vaultName                 = "${azurerm_recovery_services_vault.rsv.name}"
+    backuppolicyname          = "${azurerm_recovery_services_protection_policy_vm.simple.name}"
+    location                  = "${azurerm_resource_group.rg.name}"
+    resourcename              = "${element(azurerm_virtual_machine.vm.*.name,count.index)}"
+    resourceresourcegroupname = "${element(azurerm_virtual_machine.vm.*.resource_group_name,count.index)}"
+    resourceid                = "${element(azurerm_virtual_machine.vm.*.id,count.index)}"
   }
 }
+#resource "azurerm_recovery_services_protected_vm" "enable_backup" {
+#  count               = "${var.enable_backup == "true" && var.vm_count > 0 ? var.vm_count : 0}"
+#  resource_group_name = "${azurerm_resource_group.rsv_rg.name}"
+#  recovery_vault_name = "${azurerm_recovery_services_vault.rsv.name}"
+#  source_vm_id        = "${element(azurerm_virtual_machine.vm.*.id, count.index)}"
+#  source_vm_id        = "${azurerm_virtual_machine.vm.*.id[count.index]}"
+#  backup_policy_id    = "${azurerm_recovery_services_protection_policy_vm.simple.id}"
+#
+#    tags {
+#    environment = "${var.environment}"
+#  }
+#}
 
 #resource "azurerm_virtual_machine_extension" "IIS" {
 #  name                 = "${var.hostname}${count.index +1}"
